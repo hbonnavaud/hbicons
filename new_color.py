@@ -1,9 +1,10 @@
 import sys
 import argparse
-from pathlib import Path
-import shutil
-from PIL import Image
-import numpy as np
+import pathlib
+from colorize import create_new_color
+
+
+SOURCE_PACKAGE_PATH = pathlib.Path("").parent.absolute() / 'icons' / 'hbicons-red'
 
 
 def parse_options():
@@ -20,12 +21,15 @@ def parse_options():
 
     parser.add_argument("-n", "--name", type=str, help="Specify the new template name.")
     parser.add_argument("-c", "--color", type=str, help="Specify the new color.")
+    parser.add_argument("-f", "--full", action="store_true",
+                        help="Specify if the icons have to be fully colorized (default: False)")
 
     args = parser.parse_args()
 
     result = {
         "name": args.name if args.name else input("  > Select the new color name: "),
-        "color": args.color if args.color else input("  > Select the new color in hexadecimal format (# optional): ")
+        "color": args.color if args.color else input("  > Select the new color in hexadecimal format (# optional): "),
+        "full": args.full
     }
 
     for forbidden_character in [".", "/"]:
@@ -60,81 +64,11 @@ if __name__ == "__main__":
     print()
     options = parse_options()
 
+    create_new_color(new_color=options["color"])
     # Create the new directory
-    current_directory = Path(__file__).parent.absolute()
-    reference_icon_set_path = current_directory / "icons" / "hbicons-red"
+    current_directory = pathlib.Path(__file__).parent.absolute()
     new_color_path = current_directory / "icons" / ("hbicons-" + options["name"])
-    if not reference_icon_set_path.exists():
-        print("ERROR: can't find the reference icons set directory, ", reference_icon_set_path,
-              ". It is necessary to create a new one.", sep="")
-        sys.exit(0)
-
-    if new_color_path.exists():
-        print("Error: The directory", new_color_path, "already exists.")
-    else:
-        try:
-            shutil.copytree(reference_icon_set_path, new_color_path)
-            print("Directory ", new_color_path, " has been instantiated as a copy of ", reference_icon_set_path, ".",
-                  sep="")
-        except FileExistsError:
-            print("Error: The destination directory", new_color_path, "already exists.")
-        except Exception as e:
-            print("An error occurred:", e)
-
-    # Get the current color of the copied directory
-    reference_icon_path = new_color_path / "256x256" / "emblems" / "emblem-symbolic-link.png"
-    image = Image.open(reference_icon_path)         # Load the image
-    current_pixel_color = image.getpixel((100, 100))        # Get the color of the pixel at coordinates (x, y)
-
-    # Iterate recursively through icons inside 'new_color_path'
-    for icon_path in new_color_path.rglob("*.png"):
-        image = Image.open(icon_path).convert("RGBA")
-        pixels = np.array(image)  # Convert image to a NumPy array
-
-        # Extract RGBA channels
-        red, green, blue, alpha = pixels[:, :, 0], pixels[:, :, 1], pixels[:, :, 2], pixels[:, :, 3]
-
-        # Calculate Euclidean distance from the reference color
-        distance = np.sqrt((red - current_pixel_color[0]) ** 2 +
-                           (green - current_pixel_color[1]) ** 2 +
-                           (blue - current_pixel_color[2]) ** 2)
-
-        # Identify pixels close to the reference color (using a threshold)
-        threshold = 50  # Adjust threshold as needed
-        mask = distance < threshold
-
-        # Gather statistics on identified pixels
-        selected_pixels = pixels[:, :, :3][mask]
-        if selected_pixels.size > 0:
-            mean_color = np.mean(selected_pixels, axis=0)
-            min_color = np.min(selected_pixels, axis=0)
-            max_color = np.max(selected_pixels, axis=0)
-            std_color = np.std(selected_pixels, axis=0)
-            median_color = np.median(selected_pixels, axis=0)
-            print(
-                f"{icon_path}: Mean={mean_color}, Min={min_color}, Max={max_color}, Std={std_color}, Median={median_color}")
 
     # Iterate again to colorize the previously identified pixels with 'options["color"]'
     new_color = tuple(int(options["color"][i:i + 2], 16) for i in (0, 2, 4))  # Convert hex to RGB
-
-    for icon_path in new_color_path.rglob("*.png"):
-        image = Image.open(icon_path).convert("RGBA")
-        pixels = np.array(image)
-
-        # Extract RGBA channels
-        red, green, blue, alpha = pixels[:, :, 0], pixels[:, :, 1], pixels[:, :, 2], pixels[:, :, 3]
-
-        # Calculate Euclidean distance from the reference color
-        distance = np.sqrt((red - current_pixel_color[0]) ** 2 +
-                           (green - current_pixel_color[1]) ** 2 +
-                           (blue - current_pixel_color[2]) ** 2)
-
-        # Apply color replacement only to matching pixels
-        mask = distance < threshold
-        pixels[:, :, 0][mask] = new_color[0]
-        pixels[:, :, 1][mask] = new_color[1]
-        pixels[:, :, 2][mask] = new_color[2]
-
-        # Save the modified image
-        new_image = Image.fromarray(pixels, "RGBA")
-        new_image.save(icon_path)
+    create_new_color(new_color, options["name"], full=options["full"])
