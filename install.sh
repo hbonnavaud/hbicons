@@ -3,7 +3,7 @@
 # Define source and destination directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ICONS_SRC="$SCRIPT_DIR/icons"
-ICONS_DEST="/usr/share/icons"
+ICONS_DEST="$HOME/.local/share/icons"
 
 # Check if the icons directory exists
 if [[ ! -d "$ICONS_SRC" ]]; then
@@ -32,12 +32,12 @@ for icon_set in "${icon_sets[@]}"; do
 
         # Remove existing directory if it exists
         if [[ -d "$dest_path" ]]; then
-            echo "Warning: '$icon_name' already exists in /usr/share/icons. Replacing it..."
-            sudo rm -rf "$dest_path"
+            echo "Warning: '$icon_name' already exists in $ICONS_DEST. Replacing it..."
+            rm -rf "$dest_path"
         fi
 
         # Copy the new icon set
-        sudo cp -r "$icon_set" "$dest_path"
+        cp -r "$icon_set" "$dest_path"
 
         echo "✔ Installed: $icon_name"
     fi
@@ -45,6 +45,9 @@ done
 
 # Update the icon cache
 echo -e "\nUpdating icon cache..."
-sudo gtk-update-icon-cache -f -t "$ICONS_DEST"
-
+for dir in ~/.local/share/icons/*; do
+    if [[ -d "$dir" ]]; then
+        gtk-update-icon-cache -f -t "$dir"
+    fi
+done
 echo "✅ Icon installation complete!"
