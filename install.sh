@@ -23,6 +23,7 @@ fi
 echo "Found ${#icon_sets[@]} icon themes. Installing..."
 
 # Loop through each icon set
+mkdir -p ~/.local/share/icons/
 for icon_set in "${icon_sets[@]}"; do
     if [[ -d "$icon_set" ]]; then
         icon_name=$(basename "$icon_set")
