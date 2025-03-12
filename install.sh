@@ -51,4 +51,7 @@ for dir in ~/.local/share/icons/*; do
         gtk-update-icon-cache -f -t "$dir"
     fi
 done
+
+sudo cp add_icon.sh "$ICONs_DEST/."
+
 echo "✅ Icon installation complete!"
